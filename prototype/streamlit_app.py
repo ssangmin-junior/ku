@@ -29,11 +29,18 @@ h1, h2, h3, h4, h5 {color: #000000; margin-bottom:6px;}
 # 로고 표시 (같은 폴더에 icon.jpg)
 # ---------------------------
 header_col1, header_col2 = st.columns([1, 8])
+
 with header_col1:
-    st.image(
-       "https://raw.githubusercontent.com/ssangmin-junior/ku/main/prototype/icon.jpg",
-        width=1000,
-        caption=""
+    # HTML img 태그로 크기 지정
+    st.markdown(
+        """
+        <img 
+          src="https://raw.githubusercontent.com/ssangmin-junior/ku/main/prototype/icon.jpg" 
+          width="200"
+          style="display: block; margin-left: auto; margin-right: auto;"
+        />
+        """,
+        unsafe_allow_html=True
     )
 with header_col2:
     st.markdown("## 🚦 이동형 관광안내소 기반 실시간 혼잡 예측 및 보고 시스템")
