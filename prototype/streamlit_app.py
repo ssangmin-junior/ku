@@ -32,7 +32,7 @@ header_col1, header_col2 = st.columns([1, 8])
 with header_col1:
     st.image(
        "https://raw.githubusercontent.com/ssangmin-junior/ku/main/prototype/icon.jpg",
-        width=500,
+        width=700,
         caption=""
     )
 with header_col2:
