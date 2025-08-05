@@ -106,7 +106,7 @@ with st.sidebar:
 # ---------------------------
 # 지도 생성 함수 (강조 수정, 스타일 변경)
 # ---------------------------
-def make_base_map(dataframe, emphasize_spot=None, current_loc=None, center=None, zoom=16):
+def make_base_map(dataframe, emphasize_spot=None, current_loc=None, center=None, zoom=25):
     # 기본 맵: open-street-map으로 도로/건물 잘 보이도록
     fig = px.scatter_mapbox(
         dataframe,
