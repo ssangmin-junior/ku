@@ -36,7 +36,7 @@ with header_col1:
         """
         <img 
           src="https://raw.githubusercontent.com/ssangmin-junior/ku/main/prototype/icon.jpg" 
-          width="400"
+          width="600"
           style="display: block; margin-left: auto; margin-right: auto;"
         />
         """,
