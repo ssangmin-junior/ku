@@ -28,7 +28,7 @@ h1, h2, h3, h4, h5 {color: #000000; margin-bottom:6px;}
 # ---------------------------
 # 로고 표시 (같은 폴더에 icon.jpg)
 # ---------------------------
-header_col1, header_col2 = st.columns([3, 7])
+header_col1, header_col2 = st.columns([1, 7])
 now = datetime.now()
 current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
 with header_col1:
