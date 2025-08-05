@@ -30,17 +30,13 @@ h1, h2, h3, h4, h5 {color: #000000; margin-bottom:6px;}
 # ---------------------------
 header_col1, header_col2 = st.columns([1, 8])
 with header_col1:
-    logo_path = "icon.jpg"
-    if os.path.exists(logo_path):
-        st.image(logo_path, width=300, caption="")
-    else:
-        st.markdown("<div style='padding:8px; font-size:0.8rem; color:#666;'>로고 이미지(icon.jpg) 없음</div>", unsafe_allow_html=True)
+    st.image(
+       "https://raw.githubusercontent.com/ssangmin-junior/ku/main/prototype/icon.jpg",
+        width=300,
+        caption=""
+    )
 with header_col2:
     st.markdown("## 🚦 이동형 관광안내소 기반 실시간 혼잡 예측 및 보고 시스템")
-    now = datetime.now()
-    current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
-    st.markdown(f"**기준 시간대:** {current_time_str[:13]} (실시간 반영)")
-
 st.markdown("---")
 
 # ---------------------------
