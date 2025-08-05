@@ -121,7 +121,7 @@ def make_base_map(dataframe, emphasize_spot=None, current_loc=None, center=None,
             "tag": True
         },
         color_continuous_scale="YlOrRd",
-        zoom=zoom
+        zoom=zoom,
         height=450,
         custom_data=["spot"],
     )
