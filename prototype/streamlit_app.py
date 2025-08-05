@@ -1,24 +1,11 @@
-import os, streamlit as st
-
-st.set_page_config(page_title="이동형 관광안내소 대시보드", layout="wide")
-
-session = os.environ.get("BACKENDAI_SESSION_NAME")
-if session:
-    url = f"https://{session}.data.aitrain.ktcloud.com/proxy/8501/"
-    st.sidebar.markdown(f"🔗 **외부 접속**  \n[{url}]({url})")
-else:
-    st.sidebar.error("⚠️ 세션 이름을 못 읽었습니다.")
-
 
 # streamlit_app.py
-import streamlit as st
 import pandas as pd
 import numpy as np
 import random
 from datetime import datetime
 import plotly.express as px
-import os
-
+import streamlit as st
 # ---------------------------
 # 페이지 설정 & 스타일
 # ---------------------------
