@@ -106,7 +106,7 @@ with st.sidebar:
 # ---------------------------
 # 지도 생성 함수 (강조 수정, 스타일 변경)
 # ---------------------------
-def make_base_map(dataframe, emphasize_spot=None, current_loc=None, center=None, zoom=5):
+def make_base_map(dataframe, emphasize_spot=None, current_loc=None, center=None, zoom=20):
     # 기본 맵: open-street-map으로 도로/건물 잘 보이도록
     fig = px.scatter_mapbox(
         dataframe,
@@ -182,7 +182,7 @@ if role == "홈":
     st.subheader("🏠 개요 및 전체 현황")
     st.markdown("이 시스템은 성수동의 팝업운영자, 이동형 관광안내소, 총괄관리자가 협력하여 실시간 혼잡도를 파악하고 대응하도록 만든 시연용 대시보드입니다.")
     st.markdown("### 주요 장소 실시간 혼잡도 지도")
-    fig_home = make_base_map(df_time, center=(37.544,127.056), zoom=14)
+    fig_home = make_base_map(df_time, center=(37.544,127.056))
     st.plotly_chart(fig_home, use_container_width=True)
 
     st.markdown("### 최근 보고된 현장 로그 (위험도 높은 항목 먼저)")
@@ -206,7 +206,7 @@ elif role == "팝업운영자":
     st.markdown("### 내 팝업 & 인근 팝업 혼잡도 지도")
     popup_df = df_time[df_time["spot"].str.contains("팝업스토어")].copy()
     emphasize = st.session_state.selected_spot if st.session_state.selected_spot in popup_df["spot"].values else None
-    fig = make_base_map(popup_df, emphasize_spot=emphasize, center=(37.544,127.056), zoom=4)
+    fig = make_base_map(popup_df, emphasize_spot=emphasize, center=(37.544,127.056))
     st.plotly_chart(fig, use_container_width=True)
 
     # 아래에 실시간 상태와 보고 입력을 나란히
@@ -252,7 +252,7 @@ elif role == "이동형 관광안내소":
     emphasize_spot = st.session_state.selected_spot if st.session_state.selected_spot in df_time["spot"].values else nearest["spot"]
 
     fig = make_base_map(df_time, emphasize_spot=emphasize_spot, current_loc=(current_lat, current_lon),
-                        center=(current_lat, current_lon), zoom=4)
+                        center=(current_lat, current_lon))
     st.plotly_chart(fig, use_container_width=True)
 
     left, right = st.columns([2,1], gap="large")
@@ -322,7 +322,7 @@ elif role == "총괄 관리자":
     left, right = st.columns([2,1], gap="large")
     with left:
         st.markdown("#### 전체 지도 (선택된 장소 강조)")
-        fig = make_base_map(df_time, emphasize_spot=chosen_spot, center=(37.544,127.056), zoom=4)
+        fig = make_base_map(df_time, emphasize_spot=chosen_spot, center=(37.544,127.056))
         st.plotly_chart(fig, use_container_width=True)
     with right:
         st.markdown("#### 빠른 선택 (상위 5개)")
