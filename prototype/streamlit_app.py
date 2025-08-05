@@ -206,7 +206,7 @@ elif role == "팝업운영자":
     st.markdown("### 내 팝업 & 인근 팝업 혼잡도 지도")
     popup_df = df_time[df_time["spot"].str.contains("팝업스토어")].copy()
     emphasize = st.session_state.selected_spot if st.session_state.selected_spot in popup_df["spot"].values else None
-    fig = make_base_map(popup_df, emphasize_spot=emphasize, center=(37.544,127.056), zoom=14)
+    fig = make_base_map(popup_df, emphasize_spot=emphasize, center=(37.544,127.056), zoom=4)
     st.plotly_chart(fig, use_container_width=True)
 
     # 아래에 실시간 상태와 보고 입력을 나란히
@@ -252,7 +252,7 @@ elif role == "이동형 관광안내소":
     emphasize_spot = st.session_state.selected_spot if st.session_state.selected_spot in df_time["spot"].values else nearest["spot"]
 
     fig = make_base_map(df_time, emphasize_spot=emphasize_spot, current_loc=(current_lat, current_lon),
-                        center=(current_lat, current_lon), zoom=14)
+                        center=(current_lat, current_lon), zoom=4)
     st.plotly_chart(fig, use_container_width=True)
 
     left, right = st.columns([2,1], gap="large")
@@ -322,7 +322,7 @@ elif role == "총괄 관리자":
     left, right = st.columns([2,1], gap="large")
     with left:
         st.markdown("#### 전체 지도 (선택된 장소 강조)")
-        fig = make_base_map(df_time, emphasize_spot=chosen_spot, center=(37.544,127.056), zoom=13)
+        fig = make_base_map(df_time, emphasize_spot=chosen_spot, center=(37.544,127.056), zoom=4)
         st.plotly_chart(fig, use_container_width=True)
     with right:
         st.markdown("#### 빠른 선택 (상위 5개)")
