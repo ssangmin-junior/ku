@@ -85,6 +85,8 @@ if "admin_chosen_spot" not in st.session_state:
 with st.sidebar:
     st.title("대시보드 역할")
     role = st.radio("", ["홈", "팝업운영자", "이동형 관광안내소", "총괄 관리자"])
+    now = datetime.now()
+    current_time_str = now.strftime("%Y-%m-%d %H:%M:%S")
     st.markdown(f"🕒 **현재 시각:** {current_time_str}")
     st.markdown("")
 
