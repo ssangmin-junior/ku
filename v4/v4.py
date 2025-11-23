@@ -651,11 +651,19 @@ def render_store_detail_map():
             
             # --- 리뷰 데이터 로드 및 변환 (캐시되지 않은 데이터) ---
             try:
-                # 1. 파일 로드 및 컬럼 이름 재할당 (KeyError 해결)
-                feedback_df = pd.read_csv(FEEDBACK_FILE, engine='python')
-                feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review'] # ✅ Key Error Fix
+                # 1. 파일 로드 (인코딩 명시 및 헤더 강제 건너뛰기)
+                feedback_df = pd.read_csv(
+                    FEEDBACK_FILE, 
+                    engine='python', 
+                    encoding='utf-8',       # 인코딩 문제 방지
+                    header=None,             # 헤더 줄을 데이터로 읽음
+                    skiprows=1               # 첫 번째 줄(실제 헤더) 건너뛰기
+                )
                 
-                # 2. 데이터 타입 변환
+                # 2. 컬럼 이름 명시적 재할당 (KeyError 해결)
+                feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
+                
+                # 3. 데이터 타입 변환
                 feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
                 store_feedback = feedback_df[feedback_df['store_name'] == current_store_name]
                 
@@ -767,13 +775,19 @@ def render_admin_dashboard():
     st.markdown("---")
     st.header("💬 사용자 피드백 관리")
     try:
-        feedback_df = pd.read_csv(FEEDBACK_FILE, engine='python')
-        
-        # ✅ 수정: 컬럼 이름 재할당 (KeyError 방지)
+        # ✅ 수정: 인코딩 및 헤더/skiprows 강제 적용
+        feedback_df = pd.read_csv(
+            FEEDBACK_FILE, 
+            engine='python',
+            encoding='utf-8',
+            header=None,
+            skiprows=1
+        )
+        # ✅ 수정: 컬럼 이름 명시적 재할당
         feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
         
         feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
-        avg_ratings = feedback_df.groupby('store_name')['rating'].agg(['mean', 'count']).rename(columns={'mean': '평균별점', 'count': '리뷰수'}).round(2).sort_values('평균별점', ascending=False)        
+        avg_ratings = feedback_df.groupby('store_name')['rating'].agg(['mean', 'count']).rename(columns={'mean': '평균별점', 'count': '리뷰수'}).round(2).sort_values('평균별점', ascending=False)
         st.subheader("⭐ 최고/최저 평점 가게 Top 5")
         col1, col2 = st.columns(2)
         with col1: st.write("최고 평점 Top 5"); st.bar_chart(avg_ratings['평균별점'].head(5), color="#027529")
