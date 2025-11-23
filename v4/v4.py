@@ -656,13 +656,13 @@ def render_store_detail_map():
             
             # --- 리뷰 데이터 로드 및 변환 (캐시되지 않은 데이터) ---
             try:
-                # 1. 파일 로드 (인코딩 명시 및 헤더 강제 건너뛰기)
+                # 1. 파일 로드 (인코딩을 'utf-8-sig'로 명시하여 BOM 문제 해결)
                 feedback_df = pd.read_csv(
                     FEEDBACK_FILE, 
                     engine='python', 
-                    encoding='utf-8',       # 인코딩 문제 방지
-                    header=None,             # 헤더 줄을 데이터로 읽음
-                    skiprows=1               # 첫 번째 줄(실제 헤더) 건너뛰기
+                    encoding='utf-8-sig',       # ✅ 수정: BOM이 있는 UTF-8 처리
+                    header=None,             
+                    skiprows=1               
                 )
                 
                 # 2. 컬럼 이름 명시적 재할당 (KeyError 해결)
@@ -784,14 +784,14 @@ def render_admin_dashboard():
         feedback_df = pd.read_csv(
             get_absolute_path(FEEDBACK_FILE), 
             engine='python',
-            encoding='utf-8',
+            encoding='utf-8-sig', # ✅ 수정: BOM이 있는 UTF-8 처리
             header=None,
             skiprows=1
         )
         # ✅ 수정: 컬럼 이름 명시적 재할당
         feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
         
-        feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
+        feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce')
         avg_ratings = feedback_df.groupby('store_name')['rating'].agg(['mean', 'count']).rename(columns={'mean': '평균별점', 'count': '리뷰수'}).round(2).sort_values('평균별점', ascending=False)
         st.subheader("⭐ 최고/최저 평점 가게 Top 5")
         col1, col2 = st.columns(2)
