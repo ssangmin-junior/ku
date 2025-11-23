@@ -14,7 +14,11 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager
 import re
 # <--- 여기까지 수정
-
+def get_absolute_path(filename):
+    """스크립트 파일 위치를 기준으로 파일의 절대 경로를 반환"""
+    # os.path.abspath(__file__)은 현재 실행 중인 스크립트의 절대 경로를 가져옵니다.
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_dir, filename)
 # ---------------------------------
 # 페이지 설정 및 테마
 # ---------------------------------
@@ -194,8 +198,9 @@ def load_data_and_calculate_stats(filepath, feedback_filepath, log_filepath):
     return data
 
 # 통계가 추가된 데이터프레임 로드
-df_with_stats = load_data_and_calculate_stats('data_ver2.csv', FEEDBACK_FILE, LOG_FILE)
-
+df_with_stats = load_data_and_calculate_stats(get_absolute_path('data_ver2.csv'), 
+                                              get_absolute_path(FEEDBACK_FILE), 
+                                              get_absolute_path(LOG_FILE))
 
 @st.cache_resource 
 def generate_word_cloud(review_texts, title="리뷰 기반 워드 클라우드"):
