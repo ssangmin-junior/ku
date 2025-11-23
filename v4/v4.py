@@ -239,19 +239,29 @@ def generate_word_cloud(review_texts, title="리뷰 기반 워드 클라우드")
 
     stop_words = set(['합니다', '입니다', '했어요', '좋아요', '있습니다', '아니요', '해요', '하세요', '이다', '이예요', '합니다', '했습니다', '이에요', '않습니다', '같습니다', '아닙니다', '최고', '맛있음'])
     
-    # --- 폰트 경로 탐색 및 안정화 ---
+    # --- 폰트 경로 탐색 및 안정화 (최종 수정) ---
     font_filename = 'NanumGothic.ttf'
-    current_dir = os.getcwd()
-    font_path = os.path.join(current_dir, font_filename)
     
+    # 1. 스크립트 파일 위치를 기준으로 절대 경로를 생성합니다.
+    try:
+        # __file__이 정의되지 않은 경우를 대비한 방어적 로직
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+    except NameError:
+        base_dir = os.getcwd()
+        
+    font_path = os.path.join(base_dir, font_filename)
+    
+    # 2. 폰트 파일을 찾지 못했을 경우 Windows 기본 폰트를 시도합니다.
     if not os.path.exists(font_path):
         system_font_path = 'c:/Windows/Fonts/malgun.ttf'
         if os.path.exists(system_font_path):
             font_path = system_font_path
         else:
             font_path = None 
+            # 폰트 파일을 찾지 못했다는 경고는 계속 유지
             st.warning(f"❌ '{font_filename}' (NanumGothic) 폰트 파일을 찾을 수 없습니다. 한글이 깨지는 원인입니다.")
-
+    # --- 폰트 경로 탐색 및 안정화 끝 ---
+    
     # 3. WordCloud 생성
     wc = WordCloud(
         font_path=font_path, # 설정된 폰트 경로 사용
