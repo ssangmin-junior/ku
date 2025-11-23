@@ -156,7 +156,7 @@ def get_star_rating(rating):
 def load_feedback_data_stable():
     """KeyError 방지를 위해 강제적인 컬럼 재할당 및 인코딩 처리를 적용하여 리뷰 데이터를 로드"""
     try:
-        # Streamlit Cloud 환경에서 BOM 문제 및 헤더 문제를 강제 해결
+        # Streamlit Cloud 환경에서 BOM 문제 및 헤더 문제를 강제 해결 (최종 안정화)
         df = pd.read_csv(
             get_absolute_path(FEEDBACK_FILE), 
             engine='python',
@@ -188,13 +188,9 @@ def load_data_and_calculate_stats(filepath, feedback_filepath, log_filepath):
         st.error(f"❌ 데이터 파일('{filepath}')을 찾을 수 없습니다. 'data_ver2.csv' 파일이 있는지 확인해주세요.")
         return pd.DataFrame()
 
-    # 2. 피드백 통계 계산 (평균별점, 리뷰수) - 캐시된 로직은 안전하지만, 원본 파일 로드 안정화 필요
+    # 2. 피드백 통계 계산 (평균별점, 리뷰수) - 캐시된 로직은 안정화된 함수 호출
     try:
-        # ✅ 수정: 안정화된 유틸리티 함수 호출로 대체
         feedback_df = load_feedback_data_stable()
-        feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
-        
-        feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
         
         feedback_stats = feedback_df.groupby('store_name')['rating'].agg(['mean', 'count']).rename(columns={'mean': '평균별점', 'count': '리뷰수'}).round(1)
         feedback_stats.reset_index(inplace=True)
@@ -225,6 +221,7 @@ df_with_stats = load_data_and_calculate_stats(get_absolute_path('data_ver2.csv')
                                               get_absolute_path(FEEDBACK_FILE), 
                                               get_absolute_path(LOG_FILE))
 
+
 @st.cache_resource 
 def generate_word_cloud(review_texts, title="리뷰 기반 워드 클라우드"):
     """제공된 리뷰 텍스트를 기반으로 워드 클라우드를 생성하고 Streamlit에 표시"""
@@ -239,12 +236,11 @@ def generate_word_cloud(review_texts, title="리뷰 기반 워드 클라우드")
 
     stop_words = set(['합니다', '입니다', '했어요', '좋아요', '있습니다', '아니요', '해요', '하세요', '이다', '이예요', '합니다', '했습니다', '이에요', '않습니다', '같습니다', '아닙니다', '최고', '맛있음'])
     
-    # --- 폰트 경로 탐색 및 안정화 (최종 수정) ---
+    # --- 폰트 경로 탐색 및 안정화 ---
     font_filename = 'NanumGothic.ttf'
     
     # 1. 스크립트 파일 위치를 기준으로 절대 경로를 생성합니다.
     try:
-        # __file__이 정의되지 않은 경우를 대비한 방어적 로직
         base_dir = os.path.dirname(os.path.abspath(__file__))
     except NameError:
         base_dir = os.getcwd()
@@ -258,10 +254,8 @@ def generate_word_cloud(review_texts, title="리뷰 기반 워드 클라우드")
             font_path = system_font_path
         else:
             font_path = None 
-            # 폰트 파일을 찾지 못했다는 경고는 계속 유지
             st.warning(f"❌ '{font_filename}' (NanumGothic) 폰트 파일을 찾을 수 없습니다. 한글이 깨지는 원인입니다.")
-    # --- 폰트 경로 탐색 및 안정화 끝 ---
-    
+
     # 3. WordCloud 생성
     wc = WordCloud(
         font_path=font_path, # 설정된 폰트 경로 사용
@@ -679,21 +673,23 @@ def render_store_detail_map():
             
             # --- 리뷰 데이터 로드 및 변환 (캐시되지 않은 데이터) ---
             # ✅ 수정: 안정화된 유틸리티 함수 호출
-            feedback_df = load_feedback_data_stable() 
-            store_feedback = feedback_df[feedback_df['store_name'] == current_store_name]
+            store_feedback = load_feedback_data_stable() 
+            store_feedback = store_feedback[store_feedback['store_name'] == current_store_name]
             
             # --- 평점 및 최신 리뷰 요약 ---
             if review_count > 0:
                 st.metric(label="평균 별점", value=f"{avg_rating_val:.1f} / 5.0", delta=get_star_rating(avg_rating_val))
                 st.write("**최신 리뷰 3개**")
                 
-                # ✅ 수정: 정렬 전 'timestamp' 컬럼 존재 여부 확인 (최종 방어 로직)
+                # 3. 'timestamp' 컬럼을 사용한 정렬 (KeyError 발생 지점)
                 if 'timestamp' in store_feedback.columns:
                     for _, row in store_feedback.sort_values('timestamp', ascending=False).head(3).iterrows():
                         st.markdown(f"> {row['review']} ({get_star_rating(row['rating'])})")
                 else:
                     st.warning("데이터 문제: 리뷰 정렬을 위한 'timestamp' 컬럼을 찾을 수 없습니다.")
-#
+
+            else:
+                st.warning("아직 등록된 리뷰가 없습니다.")
                 
             # --- 전체 리뷰 보기 섹션 추가 ---
             if not store_feedback.empty:
@@ -793,7 +789,6 @@ def render_admin_dashboard():
         
         # 'rating' 컬럼은 이미 유틸리티 함수 내에서 to_numeric 처리됨
         avg_ratings = feedback_df.groupby('store_name')['rating'].agg(['mean', 'count']).rename(columns={'mean': '평균별점', 'count': '리뷰수'}).round(2).sort_values('평균별점', ascending=False)
-        #
         st.subheader("⭐ 최고/최저 평점 가게 Top 5")
         col1, col2 = st.columns(2)
         with col1: st.write("최고 평점 Top 5"); st.bar_chart(avg_ratings['평균별점'].head(5), color="#027529")
