@@ -655,7 +655,7 @@ def render_store_detail_map():
                 # 리뷰 정보를 모든 섹션에서 사용하기 위해 먼저 로드
                 feedback_df = pd.read_csv(FEEDBACK_FILE, engine='python')
                 
-                # ✅ 수정: 컬럼 이름 재할당 (KeyError 방지)
+                # ✅ 수정: 컬럼 이름 재할당 (KeyError 해결)
                 feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
                 
                 feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
@@ -670,6 +670,7 @@ def render_store_detail_map():
                 st.metric(label="평균 별점", value=f"{avg_rating_val:.1f} / 5.0", delta=get_star_rating(avg_rating_val))
                 st.write("**최신 리뷰 3개**")
                 
+                # ✅ 수정: 'timestamp' 컬럼을 사용한 정렬 (KeyError 발생 지점)
                 for _, row in store_feedback.sort_values('timestamp', ascending=False).head(3).iterrows():
                     st.markdown(f"> {row['review']} ({get_star_rating(row['rating'])})")
             else:
