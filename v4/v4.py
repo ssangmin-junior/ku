@@ -568,7 +568,6 @@ def render_store_list_view():
 
     else:
         st.warning("잘못된 접근입니다. 홈으로 돌아가십시오.")
-
 def render_store_detail_map():
     """Step 4: 가게 상세 정보 및 지도/워드 클라우드 페이지 (구: map_view)"""
     
@@ -615,7 +614,7 @@ def render_store_detail_map():
     if not filtered_df.empty:
         view_state = pdk.ViewState(latitude=selected_details['lat'], longitude=selected_details['lon'], zoom=16, pitch=50)
         
-        # ✅ 수정: get_radius를 60에서 40으로 축소
+        # ✅ 수정: get_radius를 60에서 20으로 축소
         red_layer = pdk.Layer(
             'ScatterplotLayer', data=filtered_df, get_position='[lon, lat]', 
             get_color='[220, 30, 30, 255]', get_radius=20, pickable=True, auto_highlight=True)
@@ -652,12 +651,11 @@ def render_store_detail_map():
             
             # --- 리뷰 데이터 로드 및 변환 (캐시되지 않은 데이터) ---
             try:
-                # 리뷰 정보를 모든 섹션에서 사용하기 위해 먼저 로드
+                # 1. 파일 로드 및 컬럼 이름 재할당 (KeyError 해결)
                 feedback_df = pd.read_csv(FEEDBACK_FILE, engine='python')
+                feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review'] # ✅ Key Error Fix
                 
-                # ✅ 수정: 컬럼 이름 재할당 (KeyError 해결)
-                feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
-                
+                # 2. 데이터 타입 변환
                 feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
                 store_feedback = feedback_df[feedback_df['store_name'] == current_store_name]
                 
@@ -670,7 +668,7 @@ def render_store_detail_map():
                 st.metric(label="평균 별점", value=f"{avg_rating_val:.1f} / 5.0", delta=get_star_rating(avg_rating_val))
                 st.write("**최신 리뷰 3개**")
                 
-                # ✅ 수정: 'timestamp' 컬럼을 사용한 정렬 (KeyError 발생 지점)
+                # 3. 'timestamp' 컬럼을 사용한 정렬 (KeyError 발생 지점)
                 for _, row in store_feedback.sort_values('timestamp', ascending=False).head(3).iterrows():
                     st.markdown(f"> {row['review']} ({get_star_rating(row['rating'])})")
             else:
@@ -682,7 +680,6 @@ def render_store_detail_map():
                     full_reviews = store_feedback.sort_values('timestamp', ascending=False)
                     st.dataframe(full_reviews[['timestamp', 'rating', 'review']], 
                                  use_container_width=True, 
-                                 # 리뷰 표시를 더 직관적으로 만들기 위해 column_config 사용 가능
                                  column_config={
                                      "timestamp": st.column_config.DatetimeColumn("날짜", format="YYYY-MM-DD"),
                                      "rating": st.column_config.ProgressColumn(
