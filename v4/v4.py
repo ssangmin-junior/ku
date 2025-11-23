@@ -14,11 +14,13 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager
 import re
 # <--- 여기까지 수정
+
 def get_absolute_path(filename):
     """스크립트 파일 위치를 기준으로 파일의 절대 경로를 반환"""
     # os.path.abspath(__file__)은 현재 실행 중인 스크립트의 절대 경로를 가져옵니다.
     base_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_dir, filename)
+
 # ---------------------------------
 # 페이지 설정 및 테마
 # ---------------------------------
@@ -132,17 +134,17 @@ FEEDBACK_FILE = 'feedback.csv'
 
 def log_click(log_type, value):
     """사용자 클릭 로그를 CSV 파일에 기록(추가)하는 함수"""
-    if not os.path.exists(LOG_FILE):
-        pd.DataFrame(columns=['timestamp', 'type', 'value']).to_csv(LOG_FILE, index=False)
+    if not os.path.exists(get_absolute_path(LOG_FILE)):
+        pd.DataFrame(columns=['timestamp', 'type', 'value']).to_csv(get_absolute_path(LOG_FILE), index=False)
     new_log = pd.DataFrame({'timestamp': [datetime.now()], 'type': [log_type], 'value': [value]})
-    new_log.to_csv(LOG_FILE, mode='a', header=False, index=False)
+    new_log.to_csv(get_absolute_path(LOG_FILE), mode='a', header=False, index=False)
 
 def save_feedback(store_name, rating, review):
     """사용자 피드백(가게 이름, 별점, 리뷰)을 CSV 파일에 기록(추가)하는 함수"""
-    if not os.path.exists(FEEDBACK_FILE):
-        pd.DataFrame(columns=['timestamp', 'store_name', 'rating', 'review']).to_csv(FEEDBACK_FILE, index=False)
+    if not os.path.exists(get_absolute_path(FEEDBACK_FILE)):
+        pd.DataFrame(columns=['timestamp', 'store_name', 'rating', 'review']).to_csv(get_absolute_path(FEEDBACK_FILE), index=False)
     new_feedback = pd.DataFrame({'timestamp': [datetime.now()], 'store_name': [store_name], 'rating': [rating], 'review': [review]})
-    new_feedback.to_csv(FEEDBACK_FILE, mode='a', header=False, index=False)
+    new_feedback.to_csv(get_absolute_path(FEEDBACK_FILE), mode='a', header=False, index=False)
 
 def get_star_rating(rating):
     """숫자 평점을 별 이모지 문자열로 변환하는 함수"""
@@ -155,6 +157,8 @@ def get_star_rating(rating):
 @st.cache_data
 def load_data_and_calculate_stats(filepath, feedback_filepath, log_filepath):
     """메인 데이터와 통계 데이터를 로드 및 병합하는 함수"""
+    
+    # 1. 메인 데이터 로드
     try:
         data = pd.read_csv(filepath)
         data.dropna(subset=['lat', 'lon'], inplace=True)
@@ -165,21 +169,27 @@ def load_data_and_calculate_stats(filepath, feedback_filepath, log_filepath):
         st.error(f"❌ 데이터 파일('{filepath}')을 찾을 수 없습니다. 'data_ver2.csv' 파일이 있는지 확인해주세요.")
         return pd.DataFrame()
 
-    # 1. 피드백 통계 계산 (평균별점, 리뷰수)
+    # 2. 피드백 통계 계산 (평균별점, 리뷰수) - 캐시된 로직은 안전하지만, 원본 파일 로드 안정화 필요
     try:
-        # CSV 파싱 오류 방지를 위해 engine='python' 사용
-        feedback_df = pd.read_csv(feedback_filepath, engine='python')
+        # ✅ 안정화: 인코딩, 헤더 무시, skiprows 적용
+        feedback_df = pd.read_csv(
+            feedback_filepath, 
+            engine='python',
+            encoding='utf-8',
+            header=None,
+            skiprows=1
+        )
+        feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
         
-        # 'rating' 컬럼을 숫자로 명시적으로 변환 (TypeError 방지)
         feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
         
         feedback_stats = feedback_df.groupby('store_name')['rating'].agg(['mean', 'count']).rename(columns={'mean': '평균별점', 'count': '리뷰수'}).round(1)
         feedback_stats.reset_index(inplace=True)
         feedback_stats.rename(columns={'store_name': '가게이름'}, inplace=True)
-    except FileNotFoundError:
+    except Exception: # 넓은 예외 처리로 로드 실패를 방지하고 빈 DF 반환
         feedback_stats = pd.DataFrame({'가게이름': [], '평균별점': [], '리뷰수': []})
     
-    # 2. 클릭 로그 통계 계산 (조회수)
+    # 3. 클릭 로그 통계 계산 (조회수)
     try:
         log_df = pd.read_csv(log_filepath)
         store_clicks = log_df[log_df['type'] == 'store_view']['value'].value_counts().rename('조회수')
@@ -188,7 +198,7 @@ def load_data_and_calculate_stats(filepath, feedback_filepath, log_filepath):
     except FileNotFoundError:
         store_clicks = pd.DataFrame({'가게이름': [], '조회수': []})
 
-    # 3. 모든 통계 데이터를 메인 데이터와 병합
+    # 4. 모든 통계 데이터를 메인 데이터와 병합
     data = pd.merge(data, feedback_stats, on='가게이름', how='left')
     data = pd.merge(data, store_clicks, on='가게이름', how='left')
     data['평균별점'] = data['평균별점'].fillna(0.0)
@@ -218,18 +228,14 @@ def generate_word_cloud(review_texts, title="리뷰 기반 워드 클라우드")
     
     # --- 폰트 경로 탐색 및 안정화 ---
     font_filename = 'NanumGothic.ttf'
-    
-    # 1. 현재 작업 디렉토리를 기준으로 절대 경로를 생성합니다.
     current_dir = os.getcwd()
     font_path = os.path.join(current_dir, font_filename)
     
-    # 2. 폰트 파일을 찾지 못했을 경우 Windows 기본 폰트를 시도합니다.
     if not os.path.exists(font_path):
         system_font_path = 'c:/Windows/Fonts/malgun.ttf'
         if os.path.exists(system_font_path):
             font_path = system_font_path
         else:
-            # 최종적으로 폰트를 찾지 못했을 경우
             font_path = None 
             st.warning(f"❌ '{font_filename}' (NanumGothic) 폰트 파일을 찾을 수 없습니다. 한글이 깨지는 원인입니다.")
 
@@ -453,8 +459,6 @@ def render_store_list_view():
         st.title("KUSIS 🗺️")
         st.markdown("---")
         
-        # 홈/뒤로가기 버튼은 여기에 배치하지 않고 메인 화면에만 둡니다. (가독성 목적)
-        
         # 📍 내 위치 표시/숨기기 버튼 추가
         if st.button("📍 내 위치 표시/숨기기"):
             st.session_state.show_my_location = not st.session_state.show_my_location
@@ -568,6 +572,7 @@ def render_store_list_view():
 
     else:
         st.warning("잘못된 접근입니다. 홈으로 돌아가십시오.")
+
 def render_store_detail_map():
     """Step 4: 가게 상세 정보 및 지도/워드 클라우드 페이지 (구: map_view)"""
     
@@ -751,7 +756,7 @@ def render_admin_dashboard():
     # --- 클릭 동향 분석 섹션 ---
     st.header("📊 사용자 클릭 동향 분석")
     try:
-        log_df = pd.read_csv(LOG_FILE)
+        log_df = pd.read_csv(get_absolute_path(LOG_FILE))
         col1, col2, col3 = st.columns(3)
         with col1: 
             st.subheader("대분류 클릭 Top 10")
@@ -777,7 +782,7 @@ def render_admin_dashboard():
     try:
         # ✅ 수정: 인코딩 및 헤더/skiprows 강제 적용
         feedback_df = pd.read_csv(
-            FEEDBACK_FILE, 
+            get_absolute_path(FEEDBACK_FILE), 
             engine='python',
             encoding='utf-8',
             header=None,
