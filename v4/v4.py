@@ -153,6 +153,25 @@ def get_star_rating(rating):
     stars = "⭐" * rating + "☆" * (5 - rating)
     return stars
 
+def load_feedback_data_stable():
+    """KeyError 방지를 위해 강제적인 컬럼 재할당 및 인코딩 처리를 적용하여 리뷰 데이터를 로드"""
+    try:
+        # Streamlit Cloud 환경에서 BOM 문제 및 헤더 문제를 강제 해결
+        df = pd.read_csv(
+            get_absolute_path(FEEDBACK_FILE), 
+            engine='python',
+            encoding='utf-8-sig', # BOM 처리
+            header=None,
+            skiprows=1
+        )
+        # 컬럼 이름 명시적 재할당
+        df.columns = ['timestamp', 'store_name', 'rating', 'review']
+        df['rating'] = pd.to_numeric(df['rating'], errors='coerce') 
+        return df
+    except Exception as e:
+        # 로드 실패 시 빈 DataFrame 반환
+        return pd.DataFrame(columns=['timestamp', 'store_name', 'rating', 'review'])
+    
 # @st.cache_data를 사용하여 캐싱 (성능 향상)
 @st.cache_data
 def load_data_and_calculate_stats(filepath, feedback_filepath, log_filepath):
@@ -171,14 +190,8 @@ def load_data_and_calculate_stats(filepath, feedback_filepath, log_filepath):
 
     # 2. 피드백 통계 계산 (평균별점, 리뷰수) - 캐시된 로직은 안전하지만, 원본 파일 로드 안정화 필요
     try:
-        # ✅ 안정화: 인코딩, 헤더 무시, skiprows 적용
-        feedback_df = pd.read_csv(
-            feedback_filepath, 
-            engine='python',
-            encoding='utf-8',
-            header=None,
-            skiprows=1
-        )
+        # ✅ 수정: 안정화된 유틸리티 함수 호출로 대체
+        feedback_df = load_feedback_data_stable()
         feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
         
         feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
@@ -655,37 +668,22 @@ def render_store_detail_map():
             review_count = selected_details['리뷰수']
             
             # --- 리뷰 데이터 로드 및 변환 (캐시되지 않은 데이터) ---
-            try:
-                # 1. 파일 로드 (인코딩을 'utf-8-sig'로 명시하여 BOM 문제 해결)
-                feedback_df = pd.read_csv(
-                    FEEDBACK_FILE, 
-                    engine='python', 
-                    encoding='utf-8-sig',       # ✅ 수정: BOM이 있는 UTF-8 처리
-                    header=None,             
-                    skiprows=1               
-                )
-                
-                # 2. 컬럼 이름 명시적 재할당 (KeyError 해결)
-                feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
-                
-                # 3. 데이터 타입 변환
-                feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
-                store_feedback = feedback_df[feedback_df['store_name'] == current_store_name]
-                
-            except FileNotFoundError:
-                st.warning("리뷰 파일을 찾을 수 없습니다.")
-                store_feedback = pd.DataFrame()
-                
+            # ✅ 수정: 안정화된 유틸리티 함수 호출
+            feedback_df = load_feedback_data_stable() 
+            store_feedback = feedback_df[feedback_df['store_name'] == current_store_name]
+            
             # --- 평점 및 최신 리뷰 요약 ---
             if review_count > 0:
                 st.metric(label="평균 별점", value=f"{avg_rating_val:.1f} / 5.0", delta=get_star_rating(avg_rating_val))
                 st.write("**최신 리뷰 3개**")
                 
-                # 3. 'timestamp' 컬럼을 사용한 정렬 (KeyError 발생 지점)
-                for _, row in store_feedback.sort_values('timestamp', ascending=False).head(3).iterrows():
-                    st.markdown(f"> {row['review']} ({get_star_rating(row['rating'])})")
-            else:
-                st.warning("아직 등록된 리뷰가 없습니다.")
+                # ✅ 수정: 정렬 전 'timestamp' 컬럼 존재 여부 확인 (최종 방어 로직)
+                if 'timestamp' in store_feedback.columns:
+                    for _, row in store_feedback.sort_values('timestamp', ascending=False).head(3).iterrows():
+                        st.markdown(f"> {row['review']} ({get_star_rating(row['rating'])})")
+                else:
+                    st.warning("데이터 문제: 리뷰 정렬을 위한 'timestamp' 컬럼을 찾을 수 없습니다.")
+#
                 
             # --- 전체 리뷰 보기 섹션 추가 ---
             if not store_feedback.empty:
@@ -780,19 +778,12 @@ def render_admin_dashboard():
     st.markdown("---")
     st.header("💬 사용자 피드백 관리")
     try:
-        # ✅ 수정: 인코딩 및 헤더/skiprows 강제 적용
-        feedback_df = pd.read_csv(
-            get_absolute_path(FEEDBACK_FILE), 
-            engine='python',
-            encoding='utf-8-sig', # ✅ 수정: BOM이 있는 UTF-8 처리
-            header=None,
-            skiprows=1
-        )
-        # ✅ 수정: 컬럼 이름 명시적 재할당
-        feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
+        # ✅ 수정: 안정화된 유틸리티 함수 호출
+        feedback_df = load_feedback_data_stable()
         
-        feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce')
+        # 'rating' 컬럼은 이미 유틸리티 함수 내에서 to_numeric 처리됨
         avg_ratings = feedback_df.groupby('store_name')['rating'].agg(['mean', 'count']).rename(columns={'mean': '평균별점', 'count': '리뷰수'}).round(2).sort_values('평균별점', ascending=False)
+        #
         st.subheader("⭐ 최고/최저 평점 가게 Top 5")
         col1, col2 = st.columns(2)
         with col1: st.write("최고 평점 Top 5"); st.bar_chart(avg_ratings['평균별점'].head(5), color="#027529")
