@@ -654,6 +654,10 @@ def render_store_detail_map():
             try:
                 # 리뷰 정보를 모든 섹션에서 사용하기 위해 먼저 로드
                 feedback_df = pd.read_csv(FEEDBACK_FILE, engine='python')
+                
+                # ✅ 수정: 컬럼 이름 재할당 (KeyError 방지)
+                feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
+                
                 feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
                 store_feedback = feedback_df[feedback_df['store_name'] == current_store_name]
                 
@@ -766,9 +770,12 @@ def render_admin_dashboard():
     st.header("💬 사용자 피드백 관리")
     try:
         feedback_df = pd.read_csv(FEEDBACK_FILE, engine='python')
-        feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
-        avg_ratings = feedback_df.groupby('store_name')['rating'].agg(['mean', 'count']).rename(columns={'mean': '평균별점', 'count': '리뷰수'}).round(2).sort_values('평균별점', ascending=False)
         
+        # ✅ 수정: 컬럼 이름 재할당 (KeyError 방지)
+        feedback_df.columns = ['timestamp', 'store_name', 'rating', 'review']
+        
+        feedback_df['rating'] = pd.to_numeric(feedback_df['rating'], errors='coerce') 
+        avg_ratings = feedback_df.groupby('store_name')['rating'].agg(['mean', 'count']).rename(columns={'mean': '평균별점', 'count': '리뷰수'}).round(2).sort_values('평균별점', ascending=False)        
         st.subheader("⭐ 최고/최저 평점 가게 Top 5")
         col1, col2 = st.columns(2)
         with col1: st.write("최고 평점 Top 5"); st.bar_chart(avg_ratings['평균별점'].head(5), color="#027529")
